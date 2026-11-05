@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>迷網與磨合：生態系統互動模擬</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #FDFBF7;
+      --card-bg: #FFFFFF;
+      --text: #3D352E;
+      --text-soft: #786C60;
+      --primary: #8C6D53;
+      --primary-light: #F4EBE1;
+      --green: #4A7C59;
+      --green-light: #EAF2EC;
+      --amber: #D9822B;
+      --amber-light: #FDF3E7;
+      --red: #C85A54;
+      --red-light: #FCEBEA;
+      --border: #E8E2D9;
+      --shadow: 0 4px 16px rgba(140, 109, 83, 0.08);
+      --font-rounded: "Zen Maru Gothic", "Noto Sans TC", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-rounded);
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .wrap {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px 16px 60px;
+    }
+
+    header { text-align: center; margin-bottom: 20px; }
+    header h1 { font-size: 26px; color: var(--primary); margin: 0 0 6px; }
+    header p { margin: 0; color: var(--text-soft); font-size: 14px; }
+
+    .role-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 14px;
+      margin-top: 8px;
+    }
+    .role-badge.parent { background: #E6EEF8; color: #2B5B84; }
+    .role-badge.child { background: #FCEBEA; color: #C85A54; }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .stat-item {
+      background: var(--bg);
+      padding: 10px 4px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+    .stat-label { font-size: 12px; color: var(--text-soft); display: block; }
+    .stat-val { font-size: 18px; font-weight: 700; color: var(--primary); }
+
+    .system-tag {
+      display: inline-block;
+      background: var(--primary-light);
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 999px;
+      margin-bottom: 12px;
+    }
+
+    .msg-box {
+      background: var(--amber-light);
+      border-left: 4px solid var(--amber);
+      padding: 14px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-weight: 500;
+      color: #8A4F13;
+    }
+
+    .options { display: grid; gap: 12px; }
+    .opt-btn {
+      background: var(--card-bg);
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      text-align: left;
+      font: inherit;
+      color: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .opt-btn:hover:not([disabled]) { border-color: var(--primary); background: var(--primary-light); }
+    .opt-btn[disabled] { opacity: 0.4; cursor: not-allowed; background: #F0ECE6; }
+    .opt-title { font-weight: 700; font-size: 16px; display: block; margin-bottom: 4px; }
+    .opt-desc { font-size: 13px; color: var(--text-soft); }
+
+    .btn-main {
+      background: var(--primary);
+      color: #fff;
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 32px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: block;
+      margin: 20px auto 0;
+    }
+    .btn-main:hover { background: #735740; }
+
+    .settlement-card {
+      background: var(--green-light);
+      border: 2px dashed var(--green);
+      padding: 20px;
+      border-radius: 16px;
+      margin-bottom: 20px;
+    }
+    .settlement-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .s-item { background: #fff; padding: 8px; border-radius: 8px; text-align: center; font-size: 14px; }
+
+    footer {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-soft);
+      margin-top: 30px;
+      border-top: 1px solid var(--border);
+      padding-top: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>🌱 迷網與磨合（4 回合體驗版）</h1>
+      <p>生態系統理論下的親子數位邊界互動模擬</p>
+      <div id="role-display"></div>
+    </header>
+
+    <div class="stats-bar" id="stats-bar" style="display:none;">
+      <div class="stat-item"><span class="stat-label">⏰ 上網</span><span class="stat-val" id="st-time">6h</span></div>
+      <div class="stat-item"><span class="stat-label">💰 預算</span><span class="stat-val" id="st-money">$5,000</span></div>
+      <div class="stat-item"><span class="stat-label">🤝 信任</span><span class="stat-val" id="st-trust">5</span></div>
+      <div class="stat-item"><span class="stat-label">☕ 家長</span><span class="stat-val" id="st-p-mood">5</span></div>
+      <div class="stat-item"><span class="stat-label">🎮 孩子</span><span class="stat-val" id="st-c-mood">5</span></div>
+    </div>
+
+    <div id="game-card" class="card"></div>
+
+    <footer>
+      本專案根據 Bronfenbrenner 生態系統理論設計。<br>
+      © 2026 網路成癮輔導教學互動網頁
+    </footer>
+  </div>
+
+  <script>
+    let myRole = null; // 'parent' or 'child'
+    let state = {
+      round: 1,
+      step: 'choose_role', // 'choose_role', 'play', 'round_summary', 'end'
+      time: 6,
+      money: 5000,
+      trust: 5,
+      pMood: 5,
+      cMood: 5,
+      pChoice: null,
+      cChoice: null,
+      lastDeltas: {}
+    };
+
+    const rounds = [
+      {
+        r: 1,
+        title: "第 1 / 4 回合：家庭日常與數位規範",
+        sys: "微系統（Microsystem）：家庭陪伴與過度管教",
+        pStory: "孩子最近每天上網約 6 小時，晚上海看影片，成績精神有些下滑。身為家長，你決定？",
+        pOpts: [
+          { t: "直接沒收手機/斷網 ($0)", m: 0, time: -3, trust: -2, pm: -1, desc: "時間降最多，但容易引發直接對立。" },
+          { t: "約定每日上限 2 小時 ($0)", m: 0, time: -2, trust: 1, pm: 1, desc: "建立清晰界線並給予自主空間。" },
+          { t: "工作太忙沒空管，讓他自己玩 ($0)", m: 0, time: 1, trust: 0, pm: 0, desc: "暫時避開衝突，但上網時間持續增加。" }
+        ],
+        cMessages: [
+          "【家長強行沒收了你的手機】你覺得極度不爽，網路是唯一能放鬆的地方！",
+          "【家長與你約定每天上限 2 小時】雖然有些限制，但感覺爸媽願意跟你討論。",
+          "【家長說他們太忙叫你自己玩】你感到有點孤單，只能繼續沉迷網路。"
+        ],
+        cOpts: [
+          [
+            { t: "陽奉陰違（偷偷用備用機上網）", time: 1, trust: -1, cm: 0, desc: "私下偷用，信任繼續下降。" },
+            { t: "直接反抗暴怒飆罵", time: 2, trust: -2, cm: -2, desc: "正面衝突，雙方情緒惡化。" }
+          ],
+          [
+            { t: "配合規定，嘗試去運動", time: -1, trust: 1, cm: 1, desc: "嘗試轉移注意力。" },
+            { t: "嘗試溝通協商延長時間", time: 0, trust: 1, cm: 0, desc: "提出理性訴求。" }
+          ],
+          [
+            { t: "順理成章，玩到半夜", time: 2, trust: -1, cm: -1, desc: "沉迷加重。" },
+            { t: "主動找同學出門逛街", time: -1, trust: 0, cm: 1, desc: "尋求實體社交。" }
+          ]
+        ]
+      },
+      {
+        r: 2,
+        title: "第 2 / 4 回合：週末安排與經濟代價",
+        sys: "外系統與巨系統：社區設施、家長工作與課業價值觀",
+        pStory: "週末到了，孩子說想待在家打遊戲。社區附近沒有什麼休閒場所，你會怎麼安排？",
+        pOpts: [
+          { t: "放任在家（我也要加班）($0)", m: 0, time: 2, trust: -1, pm: -1, desc: "不用花錢，但孩子全天在網路上。" },
+          { t: "報名補習班提升成績 (-$2,000)", m: -2000, time: -2, trust: -1, pm: 1, desc: "課業至上導向，可能增加孩子壓力。" },
+          { t: "報名社區運動/才藝班 (-$1,000)", m: -1000, time: -2, trust: 1, pm: 1, desc: "提供實體替代娛樂活動。" },
+          { t: "帶全家出國/渡假 (-$5,000)", m: -5000, time: -4, trust: 2, pm: 2, desc: "完全阻斷網路環境，但極度消耗預算！" }
+        ],
+        cMessages: [
+          "【爸媽週末都要加班，叫你自己待在家】你整天關在房間裡打遊戲。",
+          "【爸媽幫你報名了 $2,000 的補習班】你想去玩，但被逼著讀書很痛苦。",
+          "【爸媽幫你報名了社區羽球班】你認識了新朋友，發現實體運動蠻有趣的！",
+          "【爸媽帶你出國度假！】完全沒有網路，但風景很美，心情放鬆。"
+        ],
+        cOpts: [
+          [{ t: "打遊戲打到眼睛酸", time: 2, trust: 0, cm: -1 }, { t: "約同學線上組隊", time: 1, trust: 0, cm: 1 }],
+          [{ t: "去補習班趴著睡覺", time: 0, trust: -1, cm: -2 }, { t: "硬著頭皮聽課", time: -1, trust: 0, cm: -1 }],
+          [{ t: "積極打球，覺得好玩", time: -2, trust: 1, cm: 2 }, { t: "去了一下就想回家", time: 0, trust: 0, cm: 0 }],
+          [{ t: "享受旅遊，不碰手機", time: -3, trust: 2, cm: 2 }, { t: "一直找飯店 Wi-Fi", time: -1, trust: 0, cm: -1 }]
+        ]
+      },
+      {
+        r: 3,
+        title: "第 3 / 4 回合：親師來電與學校溝通",
+        sys: "中系統（Mesosystem）：親師溝通與學校適應",
+        pStory: "學校導師打電話來，說孩子上課常打瞌睡、作業沒交，懷疑是晚上偷打遊戲。身為家長你？",
+        pOpts: [
+          { t: "痛罵孩子並當面向老師道歉 ($0)", m: 0, time: -1, trust: -2, pm: -1, desc: "維護尊嚴但傷害孩子信任。" },
+          { t: "與老師配合，建立學校獎懲連動 ($0)", m: 0, time: -2, trust: 0, pm: 1, desc: "展現親師合作。" },
+          { t: "怪罪學校功課太多、老師管太嚴 ($0)", m: 0, time: 1, trust: 1, pm: -1, desc: "袒護孩子，但親師溝通斷裂。" }
+        ],
+        cMessages: [
+          "【家長當著老師的面大聲痛罵你】你覺得在老師面前丟臉極了。",
+          "【家長和老師達成協議，沒交作業就扣手機時間】你感覺被雙重監視。",
+          "【家長幫你向老師說話】雖然逃過一劫，但你知道問題沒解決。"
+        ],
+        cOpts: [
+          [{ t: "擺爛不讀書，徹底放棄", time: 2, trust: -1, cm: -2 }, { t: "轉向網友訴苦尋求安慰", time: 1, trust: 0, cm: 1 }],
+          [{ t: "為了拿回手機，乖乖寫作業", time: -2, trust: 1, cm: 0 }, { t: "抱怨規則太嚴格", time: 0, trust: 0, cm: -1 }],
+          [{ t: "感謝家長，但繼續偷偷打遊戲", time: 1, trust: 0, cm: 1 }, { t: "趁機提出想減少補習", time: 0, trust: 1, cm: 0 }]
+        ]
+      },
+      {
+        r: 4,
+        title: "第 4 / 4 回合：學期尾聲與長遠契約",
+        sys: "整體系統整合：建立彈性自主的數位邊界",
+        pStory: "學期即將結束，回顧這段時間的互動，身為家長，你決定未來如何經營親子數位契約？",
+        pOpts: [
+          { t: "繼續保持高壓控制，防止退步 ($0)", m: 0, time: -2, trust: -2, pm: -1, desc: "長期高壓可能導致未來大反彈。" },
+          { t: "召開家庭會議，雙方共同制定彈性契約 ($0)", m: 0, time: -2, trust: 3, pm: 2, desc: "培養自主管理與信任。" },
+          { t: "累了，完全放棄不管了 ($0)", m: 0, time: 3, trust: -1, pm: -2, desc: "失控風險極高。" }
+        ],
+        cMessages: [
+          "【家長表示未來要繼續嚴格管控】你覺得喘不過氣，想著等畢業後一定要狂玩。",
+          "【家長邀請你一起制定未來的數位使用契約】你感到被尊重，願意遵守自己簽署的規則。",
+          "【家長表示再也不想管你了】你隨心所欲地玩，但心裡隱隱覺得空虛。"
+        ],
+        cOpts: [
+          [{ t: "表面答應，私下謀劃反抗", time: 2, trust: -2, cm: -1 }, { t: "無奈接受，放棄溝通", time: 0, trust: -1, cm: -2 }],
+          [{ t: "認真履行契約，學會自主控制", time: -2, trust: 2, cm: 2 }, { t: "珍惜信任，主動安排運動休閒", time: -2, trust: 2, cm: 2 }],
+          [{ t: "無限制狂玩，上網時數爆表", time: 4, trust: -2, cm: 0 }, { t: "玩到無聊，反而不知道要做什麼", time: 2, trust: -1, cm: -1 }]
+        ]
+      }
+    ];
+
+    function selectRole(role) {
+      myRole = role;
+      state.step = 'play';
+      document.getElementById('role-display').innerHTML = `
+        <span class="role-badge ${role}">
+          ${role==='parent'?'👨‍👩‍👧 你的角色：照顧者（家長）':'🎮 你的角色：被照顧者（孩子）'}
+        </span>
+      `;
+      document.getElementById('stats-bar').style.display = 'grid';
+      render();
+    }
+
+    function render() {
+      document.getElementById('st-time').innerText = state.time + 'h';
+      document.getElementById('st-money').innerText = '$' + state.money.toLocaleString();
+      document.getElementById('st-trust').innerText = state.trust;
+      document.getElementById('st-p-mood').innerText = state.pMood;
+      document.getElementById('st-c-mood').innerText = state.cMood;
+
+      const card = document.getElementById('game-card');
+
+      if (state.step === 'choose_role') {
+        card.innerHTML = `
+          <h2 style="text-align:center;">👥 請選擇你在本局遊戲中的角色</h2>
+          <p style="text-align:center; color:var(--text-soft);">請依照組別選擇身份：</p>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:20px;">
+            <button class="opt-btn" style="text-align:center; padding:24px;" onclick="selectRole('parent')">
+              <span class="opt-title" style="font-size:20px; color:#2B5B84;">👨‍👩‍👧 照顧者組</span>
+              <span class="opt-desc">掌控家長決策、預算花費與規則制定</span>
+            </button>
+            <button class="opt-btn" style="text-align:center; padding:24px;" onclick="selectRole('child')">
+              <span class="opt-title" style="font-size:20px; color:#C85A54;">🎮 被照顧者組</span>
+              <span class="opt-desc">回應家長管教，平衡心情與網路使用</span>
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      if (state.step === 'round_summary') {
+        const d = state.lastDeltas;
+        card.innerHTML = `
+          <div class="settlement-card">
+            <h2 style="margin:0 0 8px; color:var(--green); text-align:center;">📊 第 ${state.round - 1} 回合互動結算快照</h2>
+            <p style="text-align:center; margin:0; font-size:14px; color:var(--text-soft);">本回合對雙方數值造成的衝擊如下：</p>
+            
+            <div class="settlement-grid">
+              <div class="s-item">⏰ 平均上網<br><b>${state.time}h</b> <span style="color:${d.time>0?'#C85A54':'#4A7C59'}">(${d.time>=0?'+':''}${d.time})</span></div>
+              <div class="s-item">💰 剩餘預算<br><b>$${state.money.toLocaleString()}</b> <span style="color:${d.money<0?'#C85A54':'#4A7C59'}">(${d.money>=0?'+':''}${d.money})</span></div>
+              <div class="s-item">🤝 親子信任<br><b>${state.trust}</b> <span style="color:${d.trust>=0?'#4A7C59':'#C85A54'}">(${d.trust>=0?'+':''}${d.trust})</span></div>
+              <div class="s-item">☕ 家長心情<br><b>${state.pMood}</b> <span style="color:${d.pm>=0?'#4A7C59':'#C85A54'}">(${d.pm>=0?'+':''}${d.pm})</span></div>
+              <div class="s-item">🎮 孩子心情<br><b>${state.cMood}</b> <span style="color:${d.cm>=0?'#4A7C59':'#C85A54'}">(${d.cm>=0?'+':''}${d.cm})</span></div>
+            </div>
+          </div>
+          <button class="btn-main" onclick="nextRound()">已確認數值，進入第 ${state.round} 回合 ➔</button>
+        `;
+        return;
+      }
+
+      if (state.step === 'end') {
+        let isPerfect = state.time <= 3 && state.pMood >= 5 && state.cMood >= 5 && state.trust >= 5 && state.money > 0;
+        card.innerHTML = `
+          <h2 style="text-align:center;">🎉 4 回合模擬結束！</h2>
+          <div class="msg-box" style="background:${isPerfect?'#EAF2EC':'#FDF3E7'}; color:${isPerfect?'#4A7C59':'#D9822B'}; text-align:center;">
+            <h3>${isPerfect ? '🌟 完美磨合成功！' : '⚠️ 遊戲完成：系統觀察報告'}</h3>
+            <p>${isPerfect ? '你們成功在 4 個回合中磨合出健康的數位界線！上網時間降至 3 小時以下，且維持了良好的信任與預算！' : '雖然完成了 4 個回合，但親子間的信任、心情或預算產生了失衡。這展現了輔導中「環境系統拉扯」的真實困境。'}</p>
+          </div>
+
+          <div style="background:var(--bg); padding:16px; border-radius:12px; border:1px solid var(--border); margin-bottom:20px;">
+            <h4>📋 最終數據結算統計：</h4>
+            <ul>
+              <li><b>最終上網時數：</b> ${state.time} 小時 ${state.time <= 3 ? '✅ (達到健康目標)' : '❌ (仍偏高)'}</li>
+              <li><b>剩餘預算：</b> $${state.money.toLocaleString()} ${state.money > 0 ? '✅ (未破產)' : '❌ (預算透支)'}</li>
+              <li><b>親子信任度：</b> ${state.trust} 分 ${state.trust >= 5 ? '✅ (信任良好)' : '⚠️ (關係緊張)'}</li>
+              <li><b>家長心情：</b> ${state.pMood} 分 | <b>孩子心情：</b> ${state.cMood} 分</li>
+            </ul>
+          </div>
+
+          <button class="btn-main" onclick="location.reload()">↺ 重新開始新一局</button>
+        `;
+        return;
+      }
+
+      const cur = rounds[state.round - 1];
+
+      // 【照顧者角色視角】
+      if (myRole === 'parent') {
+        if (state.pChoice === null) {
+          card.innerHTML = `
+            <span class="system-tag">${cur.sys}</span>
+            <h2>${cur.title}</h2>
+            <p style="font-size:17px; font-weight:500;">${cur.pStory}</p>
+            <div class="options">
+              ${cur.pOpts.map((o, idx) => {
+                let disabled = state.money + o.m < 0;
+                return `<button class="opt-btn" ${disabled?'disabled':''} onclick="parentVote(${idx})">
+                  <span class="opt-title">${o.t}</span>
+                  <span class="opt-desc">${disabled ? '❌ 剩餘預算不足無法執行' : o.desc}</span>
+                </button>`;
+              }).join('')}
+            </div>
+          `;
+        } else {
+          card.innerHTML = `
+            <span class="system-tag">${cur.sys}</span>
+            <h2>${cur.title}</h2>
+            <div class="msg-box">
+              ✅ 照顧者已完成決定：<b>${cur.pOpts[state.pChoice].t}</b><br>
+              🔒 權限鎖定中：請提醒【被照顧者組】進行回應選擇...
+            </div>
+          `;
+        }
+      } 
+      // 【被照顧者角色視角】
+      else {
+        if (state.pChoice === null) {
+          card.innerHTML = `
+            <span class="system-tag">${cur.sys}</span>
+            <h2>${cur.title}</h2>
+            <div class="msg-box">
+              ⏳ 正在等待【照顧者組】做出決策...<br>
+              請等待照顧者選擇完成，畫面將會自動解鎖。
+            </div>
+          `;
+        } else {
+          card.innerHTML = `
+            <span class="system-tag">${cur.sys}</span>
+            <h2>${cur.title}</h2>
+            <div class="msg-box">${cur.cMessages[state.pChoice]}</div>
+            <p style="font-size:16px; font-weight:700;">面對家長的這個決定，你選擇？</p>
+            <div class="options">
+              ${cur.cOpts[state.pChoice].map((o, idx) => `
+                <button class="opt-btn" onclick="childVote(${idx})">
+                  <span class="opt-title">${o.t}</span>
+                  <span class="opt-desc">${o.desc}</span>
+                </button>
+              `).join('')}
+            </div>
+          `;
+        }
+      }
+    }
+
+    function parentVote(idx) {
+      state.pChoice = idx;
+      render();
+    }
+
+    function childVote(idx) {
+      state.cChoice = idx;
+      const cur = rounds[state.round - 1];
+      const pOpt = cur.pOpts[state.pChoice];
+      const cOpt = cur.cOpts[state.pChoice][state.cChoice];
+
+      let dTime = pOpt.time + cOpt.time;
+      let dMoney = pOpt.m;
+      let dTrust = pOpt.trust + cOpt.trust;
+      let dPm = pOpt.pm;
+      let dCm = cOpt.cm;
+
+      state.time = Math.max(0, state.time + dTime);
+      state.money += dMoney;
+      state.trust = Math.max(0, state.trust + dTrust);
+      state.pMood = Math.max(0, state.pMood + dPm);
+      state.cMood = Math.max(0, state.cMood + dCm);
+
+      state.lastDeltas = { time: dTime, money: dMoney, trust: dTrust, pm: dPm, cm: dCm };
+      state.step = 'round_summary';
+      render();
+    }
+
+    function nextRound() {
+      state.pChoice = null;
+      state.cChoice = null;
+      
+      if (state.round >= 4) {
+        state.step = 'end';
+      } else {
+        state.round += 1;
+        state.step = 'play';
+      }
+      render();
+    }
+
+    render();
+  </script>
+</body>
+</html>
